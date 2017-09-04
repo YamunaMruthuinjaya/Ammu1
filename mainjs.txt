@@ -1,0 +1,1412 @@
+console.log('%c Proudly Crafted with ZiOn.', 'background: #222; color: #bada55');
+
+/* ---------------------------------------------- /*
+ * Preloader
+ /* ---------------------------------------------- */
+(function(){
+    $(window).on('load', function() {
+		var months=["Jan","Feb","Mar","April","May","June","July","Aug","Sept","Oct","Nov","Dec"];
+ 
+        $('.loader').fadeOut();
+        $('.page-loader').delay(350).fadeOut('slow');
+		
+		var d = new Date(),mnth = d.getMonth()+1,yr = d.getFullYear();
+		
+		$("#timesheetenrty").hide();
+			$("#tssummary").hide();
+		
+		
+		
+		$('#selmon').val(mnth);
+		document.getElementById('selmon').innerHTML=months[mnth-1];
+		$('#selyear').val(yr);
+		document.getElementById('selyear').innerHTML=yr;
+		
+		
+		
+    });
+
+    $(document).ready(function() {
+	
+	/***for timesheet*/
+	
+		
+		timeperiodfun();
+		
+	
+  $("#add").click(function(){
+	var existngvals=[];
+	var existngproj=[];
+	if ($('#search').val() == -1){
+	alert("please select project");
+	}
+	else
+	{
+		if ($('#timeperiod').val() == -1)
+		{
+			alert("please select Time period");
+		}
+		else
+		{	
+			/*$('#table2 tbody tr td:nth-child(2)').each( function(){
+				//alert($('#search').val());
+				//alert($(this).text());
+				var val =$(this).text().split("-");
+				existngproj.push($.trim(val[1]));
+				
+			});
+			for(var i=0;i<existngproj.length-1;i++){
+				
+				if($('#search').val() == existngproj[i])
+				{	
+					var currow=[];
+					var rwnum=i+1;
+					alert("Existing entry");
+					$('#table2 tbody tr:nth-child('+rwnum+')').find("td").each(function(){
+					
+					currow.push($(this).text());
+					});
+					for(var t=2;t<currow.length;t++)
+					{
+						 var val =currow[t].split("-");
+						 if(val[1]==''){val[1]=0;}
+						 currow[t]=val[1];
+						alert(currow[t]);
+					}
+				}
+				
+			}*/
+			$("#timesheetenrty").show();
+		}
+	}
+    
+});
+
+
+$("#selectall").change(function() {
+    if($(this).prop('checked') == true) {
+        $('.checkall').prop('checked', true);
+    } else {
+        $('.checkall').prop('checked', false);
+    }
+});
+
+
+	
+var selectBox = document.getElementById('year');
+for (var i = 2020; i >= 2010; i--) {
+
+    var option = document.createElement('option');
+    option.value = i;
+    option.innerHTML = i;
+    selectBox.appendChild(option);
+}
+
+
+
+$("#year").change(function() {
+timeperiodfun();
+});
+
+
+
+$("#month").change(function() {
+timeperiodfun();
+});
+
+
+
+function timeperiodfun() 
+{
+	
+	$('#timeperiod').find('option').remove().end().append('<option value="-1">--select--</option>');
+	var month = $('#month').val();
+	var year = $('#year').val();
+	
+	
+	var firstOfMonth = new Date(year, month-1, 1);
+    var lastOfMonth = new Date(year, month, 0);
+    var used = firstOfMonth.getDay() + lastOfMonth.getDate();
+	var noofweeks=Math.ceil( used / 7);
+
+       
+	   
+    var date = new Date(month+'/01/'+year);
+	var day = date.getDay();
+	var lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+	var diff = 7 - parseInt(day);
+	var start=1;
+	
+	
+	for(period=1;period<=noofweeks;period++)
+	{
+		if(period ==1)
+		{
+			end = diff;
+		}
+		else
+		{
+			start = diff + 7 * (parseInt(period) - 2)+1
+			end = start+6;
+			if(parseInt(end) > parseInt(lastDay))
+				end = lastDay;
+		}
+		var weekrange =start+'/'+month+'/'+year+'  --  '+end+'/'+month+'/'+year;
+		var tp = document.getElementById('timeperiod');
+		var opt = document.createElement('option');	
+		opt.value =start+'-'+end;
+		opt.innerHTML = weekrange;
+		tp.appendChild(opt);
+	
+	}	
+		
+	}
+	
+	$("#timeperiod").change(function() {
+	
+	$("#tssumrybody").empty();
+	$("#tssummary").show();
+	
+	$(".tsentrybody input").val('');
+	
+	
+	var range=$('#timeperiod').val();
+	
+	var sun=document.getElementById('sun');
+	var mon=document.getElementById('mon');
+	var tue=document.getElementById('tue');
+	var wed=document.getElementById('wed');
+	var thr=document.getElementById('thr');
+	var fri=document.getElementById('fri');
+	var sat=document.getElementById('sat');
+	
+	var sun1=document.getElementById('sun1');
+	var mon1=document.getElementById('mon1');
+	var tue1=document.getElementById('tue1');
+	var wed1=document.getElementById('wed1');
+	var thr1=document.getElementById('thr1');
+	var fri1=document.getElementById('fri1');
+	var sat1=document.getElementById('sat1');
+	
+	sun.innerHTML="";
+	sun.value="";
+	mon.innerHTML="";
+	mon.value ="";
+	tue.innerHTML="";
+	tue.value="";
+	wed.innerHTML="";
+	wed.value="";
+	thr.innerHTML="";
+	thr.value="";
+	fri.innerHTML="";
+	fri.value="";
+	sat.innerHTML="";
+	sat.value="";
+	
+	sun1.innerHTML="";
+	sun1.value="";
+	mon1.innerHTML="";
+	mon1.value ="";
+	tue1.innerHTML="";
+	tue1.value="";
+	wed1.innerHTML="";
+	wed1.value="";
+	thr1.innerHTML="";
+	thr1.value="";
+	fri1.innerHTML="";
+	fri1.value="";
+	sat1.innerHTML="";
+	sat1.value="";
+	
+	for(var n=2;n<=8;n++)
+	{
+		$('#table1 th:nth-child('+n+')').show();
+		$('#table1 td:nth-child('+n+')').show();
+	}
+	for(var n=3;n<=9;n++)
+	{
+		$('#table2 th:nth-child('+n+')').show();
+		$('#table3 td:nth-child('+n+')').show();
+	}
+	 var res = range.split("-");
+	 
+	 var start1=res[0];
+	 var end1=res[1];
+	 var month1 = $('#month').val();
+	var year1 = $('#year').val();
+	
+	 var date1 = new Date(month1+'/'+start1+'/'+year1);
+	 
+	var day1 = date1.getDay();
+	//alert(res+" "+day1+" "+start1+" "+end1);
+		
+	for( var d=start1;d<=end1;d++)
+	{	
+		//alert(d);
+		switch(day1)
+		{
+			case 0:	sun.value = d+'-Sun';
+					sun.innerHTML = d+'-Sun';
+					sun1.value = d+'-Sun';
+					sun1.innerHTML = d+'-Sun';
+					break;
+					
+			case 1:	mon.value =d+'-Mon';
+					mon.innerHTML = d+'-Mon';
+					mon1.value =d+'-Mon';
+					mon1.innerHTML = d+'-Mon';
+					break;
+					
+			case 2:	tue.value =d+'-Tue';
+					tue.innerHTML = d+'-Tue';
+					tue1.value =d+'-Tue';
+					tue1.innerHTML = d+'-Tue';
+					break;
+					
+			case 3:	wed.value =d+'-wed';
+					wed.innerHTML = d+'-wed';
+					wed1.value =d+'-wed';
+					wed1.innerHTML = d+'-wed';
+					break;
+					
+			case 4:	thr.value =d+'-thr';
+					thr.innerHTML = d+'-thr';
+					thr1.value =d+'-thr';
+					thr1.innerHTML = d+'-thr';
+					break;
+					
+			case 5:	fri.value =d+'-fri';
+					fri.innerHTML = d+'-fri';
+					fri1.value =d+'-fri';
+					fri1.innerHTML = d+'-fri';
+					break;
+					
+			case 6:	sat.value =d+'-sat';
+					sat.innerHTML = d+'-sat';
+					sat1.value =d+'-sat';
+					sat1.innerHTML = d+'-sat';
+					break;	
+			
+		}
+		day1=day1+1;
+		
+	}
+	for(var n=2;n<=8;n++)
+	{
+		if ($('#table1 th:nth-child('+n+')').val() == ''){
+		$('#table1 th:nth-child('+n+')').hide();
+		$('#table1 td:nth-child('+n+')').hide();
+		}
+	}
+	for(var n=3;n<=9;n++)
+	{	
+		
+		if ($('#table2 th:nth-child('+n+')').val() == ''){
+		$('#table2 th:nth-child('+n+')').hide();
+		$('#table2 td:nth-child('+n+')').hide();
+		}
+	}
+	
+	});
+	
+	
+	
+	$("#search").change(function() {
+		var projval=$('#search').val();
+		
+		var req=document.getElementById('req');
+		var des=document.getElementById('des');
+		var con=document.getElementById('con');
+		var test=document.getElementById('test');
+		var rel=document.getElementById('rel');
+		
+		req.innerHTML='Project '+projval+' - Requirement';
+		des.innerHTML='Project '+projval+' - Design';
+		con.innerHTML='Project '+projval+' - Construction';
+		test.innerHTML='Project '+projval+' - Testing';
+		rel.innerHTML='Project '+projval+' - Release';
+		
+		req.value=projval+'-Requirement';
+		des.value=projval+'-Design';
+		con.value=projval+'-Construction';
+		test.value=projval+'-Testing';
+		rel.value=projval+'-Release';
+	});
+	
+	
+	var remove=0;
+	var grndtotal=[];
+	
+	for(var i=0;i<7;i++){grndtotal[i]=0;}
+	
+	
+	$("#save").click(function() {
+	//alert(remove);
+	if(remove!=0){ $('#table2 tbody tr:last').remove();}
+	var items=[];
+	var item;
+	for(var j=2;j<=8;j++)
+	{
+		$('#table1 tbody tr td:nth-child('+j+')').each( function(){
+			
+			
+				if($(this).is(":visible"))
+				{	//var i=j-1;
+					//alert($('#table1 tbody tr:nth-child('+i+') th').val());
+					//alert("visible");
+					//alert($(this).children('input').val()); 
+					item= $(this).children('input').val();
+					if(item==''){item=0;}
+					items.push(item); 
+					
+				}
+				
+		});
+	}
+		//for(var i=0;i<items.length;i++){alert(items[i]);}
+		 
+		 
+		var itemsval=[];
+		var itemsval1=[];
+		var k=-1;
+		var q=0;
+		for(var j=0;j<items.length;j++)
+		{	
+			k++;
+			
+			itemsval.push(items[j]);
+			if(k==4)
+			{
+				k=-1;
+				itemsval1.push(itemsval);
+				var itemsval=[];
+				q=q+1;
+			}
+		}
+		/*for(var r=0;r<itemsval1.length;r++)
+		{
+			alert(itemsval1[r]);
+		}*/
+		
+		var items1=[];
+		var total=[];
+		var sum=0;
+		var k=-1;
+		
+		for(var j=0;j<items.length;j++)
+		{	
+			k++;
+			//alert(items[j]);
+			if(items[j] != '' && items[j]!=0)
+			{
+				switch(k)
+				{
+					case 0:	//alert(items[j]+' - Req');
+							items1.push('Req  - '+items[j]);
+							break;
+							
+					case 1:	//alert(items[j]+' - Des');
+							items1.push('Des  - '+items[j]);
+							break;
+							
+					case 2://	alert(items[j]+' - Con');
+							items1.push('Con  - '+items[j]);
+							break;
+							
+					case 3:	//alert(items[j]+' - Test');
+							items1.push('Test - '+items[j]);
+							break;
+							
+					case 4:	//alert(items[j]+' - Rel');
+							items1.push('Rel  - '+items[j]);
+							break;
+				}
+				
+				sum=parseInt(sum)+parseInt(items[j]);
+			}
+			else
+			{
+				//alert("null");
+				if(items[j]==0){items[j]='';}
+				items1.push(items[j]);
+			}
+			
+			
+			//alert(k);
+			if(k==4)
+			{
+				k=-1;
+				total.push(sum);
+				sum=0;
+				
+				
+				
+			}
+		}
+		
+		for(var i=0;i<total.length;i++)
+		{
+			grndtotal[i]=grndtotal[i]+total[i];
+			if(grndtotal[i]>24)
+			{
+				alert("Exceeding 24 hrs!!!!Kindly enter valid entries");
+				for(var j=0;j<=i;j++){
+					grndtotal[j]=grndtotal[j]-total[j];
+					
+				}
+				remove=0;
+				return;
+			}
+		}
+		//for(var i=0;i<items1.length;i++){alert(items1[i]);}
+		var k=-1;
+		var items2=[];
+		var a='';
+		for(var g=0;g<items1.length;g++)
+		{	
+			k++;
+			//alert(items1[g]);
+			if(items1[g]!='')
+			{
+				
+				//alert("in if");
+				a=a+"\n"+items1[g];
+				//alert(a);
+			}
+			
+			if(k==4)
+			{
+				//alert("k is 4");
+				k=-1;
+				if(a!='')
+				{
+					items2.push(a);
+				}
+				else
+				{
+					items2.push("-");
+				}
+				//alert("a is "+a);
+				a='';
+			}
+		}
+		//alert(items2.length);
+		
+		$("#timesheetenrty").hide();
+		
+		var projval=$('#search').val();
+		
+		var projname="Project - "+$('#search').val();
+		
+		var tds='';
+	
+		for(var a=0;a<items2.length;a++){
+			tds=tds+"<td class='txtboxwidth1' >"+items2[a]+"<input type='text' class='txtboxwidth' value='"+itemsval1[a]+"' style='visibility: hidden;' /></td>";
+		}
+		
+		var rownum=0;
+		$('#table2 tbody tr td:nth-child(2)').each( function(){
+			//alert(projname);
+			//alert($(this).text());
+			rownum=rownum+1;
+			
+			if($(this).text() == projname)
+			{	
+				//alert(rownum);
+				//alert("existing entry");
+				var currow=[];
+				
+				$('#table2 tbody tr:nth-child('+rownum+')').find("td").each(function(){
+					 alert($(this).children('input').val());
+					currow.push($(this).text());
+				});
+				for(var t=2;t<currow.length;t++)
+				{	
+					
+					 var val =currow[t].split("-");
+					 if(val[1]==''){val[1]=0;}
+					 currow[t]=val[1];
+					grndtotal[t-2]=grndtotal[t-2]-currow[t];
+				}
+				$('#table2 tbody tr:nth-child('+rownum+')').remove();
+				
+				rownum=0;
+			 }
+			
+		});
+		
+		
+		$('#table2 tbody ').append('<tr ><td><input class="checkall" type="checkbox" value=""></td><td>'+projname+'</td>'+tds+'</tr>');
+	
+		var totl;
+		for(var a=0;a<total.length;a++){
+			totl=totl+"<td class='txtboxwidth1'>"+grndtotal[a]+"</td>";
+		}
+		
+		$('#table2 tbody ').append('<tr><td style="text-align:center;" colspan="2"><b>Total</b></td>'+totl+'</tr>');
+		
+		remove=remove+1;
+		$(".tsentrybody input").val('');
+		
+		
+	});
+	
+	$("#submit").click(function() {
+		//confirm("Submit the timesheet entries!!??");
+		alert("Timesheet entries are submitted");
+		$("#timesheetenrty").hide();
+		$("#tssummary").hide();
+		$("#tssumrybody").empty();
+		location.reload();
+		remove=0;
+	});
+	
+	/***for timesheet ends*/
+	
+	
+	/***for autocompletion*/
+	
+	
+
+	
+	/***for autocompletion ends*/
+	
+	
+        /* ---------------------------------------------- /*
+         * WOW Animation When You Scroll
+         /* ---------------------------------------------- */
+
+        wow = new WOW({
+            mobile: false
+        });
+        wow.init();
+
+
+        /* ---------------------------------------------- /*
+         * Scroll top
+         /* ---------------------------------------------- */
+
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 100) {
+                $('.scroll-up').fadeIn();
+            } else {
+                $('.scroll-up').fadeOut();
+            }
+        });
+
+        $('a[href="#totop"]').click(function() {
+            $('html, body').animate({ scrollTop: 0 }, 'slow');
+            return false;
+        });
+
+
+        /* ---------------------------------------------- /*
+         * Initialization General Scripts for all pages
+         /* ---------------------------------------------- */
+
+        var homeSection = $('.home-section'),
+            navbar      = $('.navbar-custom'),
+            navHeight   = navbar.height(),
+            worksgrid   = $('#works-grid'),
+            width       = Math.max($(window).width(), window.innerWidth),
+            mobileTest  = false;
+
+        if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            mobileTest = true;
+        }
+
+        buildHomeSection(homeSection);
+        navbarAnimation(navbar, homeSection, navHeight);
+        navbarSubmenu(width);
+        hoverDropdown(width, mobileTest);
+
+        $(window).resize(function() {
+            var width = Math.max($(window).width(), window.innerWidth);
+            buildHomeSection(homeSection);
+            hoverDropdown(width, mobileTest);
+        });
+
+        $(window).scroll(function() {
+            effectsHomeSection(homeSection, this);
+            navbarAnimation(navbar, homeSection, navHeight);
+        });
+
+        /* ---------------------------------------------- /*
+         * Set sections backgrounds
+         /* ---------------------------------------------- */
+
+        var module = $('.home-section, .module, .module-small, .side-image');
+        module.each(function(i) {
+            if ($(this).attr('data-background')) {
+                $(this).css('background-image', 'url(' + $(this).attr('data-background') + ')');
+            }
+        });
+
+        /* ---------------------------------------------- /*
+         * Home section height
+         /* ---------------------------------------------- */
+
+        function buildHomeSection(homeSection) {
+            if (homeSection.length > 0) {
+                if (homeSection.hasClass('home-full-height')) {
+                    homeSection.height($(window).height());
+                } else {
+                    homeSection.height($(window).height() * 0.85);
+                }
+            }
+        }
+
+
+        /* ---------------------------------------------- /*
+         * Home section effects
+         /* ---------------------------------------------- */
+
+        function effectsHomeSection(homeSection, scrollTopp) {
+            if (homeSection.length > 0) {
+                var homeSHeight = homeSection.height();
+                var topScroll = $(document).scrollTop();
+                if ((homeSection.hasClass('home-parallax')) && ($(scrollTopp).scrollTop() <= homeSHeight)) {
+                    homeSection.css('top', (topScroll * 0.55));
+                }
+                if (homeSection.hasClass('home-fade') && ($(scrollTopp).scrollTop() <= homeSHeight)) {
+                    var caption = $('.caption-content');
+                    caption.css('opacity', (1 - topScroll/homeSection.height() * 1));
+                }
+            }
+        }
+
+        /* ---------------------------------------------- /*
+         * Intro slider setup
+         /* ---------------------------------------------- */
+
+        if( $('.hero-slider').length > 0 ) {
+            $('.hero-slider').flexslider( {
+                animation: "fade",
+                animationSpeed: 1000,
+                animationLoop: true,
+                prevText: '',
+                nextText: '',
+                before: function(slider) {
+                    $('.titan-caption').fadeOut().animate({top:'-80px'},{queue:false, easing: 'swing', duration: 700});
+                    slider.slides.eq(slider.currentSlide).delay(500);
+                    slider.slides.eq(slider.animatingTo).delay(500);
+                },
+                after: function(slider) {
+                    $('.titan-caption').fadeIn().animate({top:'0'},{queue:false, easing: 'swing', duration: 700});
+                },
+                useCSS: true
+            });
+        }
+
+
+        /* ---------------------------------------------- /*
+         * Rotate
+         /* ---------------------------------------------- */
+
+        $(".rotate").textrotator({
+            animation: "dissolve",
+            separator: "|",
+            speed: 3000
+        });
+
+
+        /* ---------------------------------------------- /*
+         * Transparent navbar animation
+         /* ---------------------------------------------- */
+
+        function navbarAnimation(navbar, homeSection, navHeight) {
+            var topScroll = $(window).scrollTop();
+            if (navbar.length > 0 && homeSection.length > 0) {
+                if(topScroll >= navHeight) {
+                    navbar.removeClass('navbar-transparent');
+                } else {
+                    navbar.addClass('navbar-transparent');
+                }
+            }
+        }
+
+        /* ---------------------------------------------- /*
+         * Navbar submenu
+         /* ---------------------------------------------- */
+
+        function navbarSubmenu(width) {
+            if (width > 767) {
+                $('.navbar-custom .navbar-nav > li.dropdown').hover(function() {
+                    var MenuLeftOffset  = $('.dropdown-menu', $(this)).offset().left;
+                    var Menu1LevelWidth = $('.dropdown-menu', $(this)).width();
+                    if (width - MenuLeftOffset < Menu1LevelWidth * 2) {
+                        $(this).children('.dropdown-menu').addClass('leftauto');
+                    } else {
+                        $(this).children('.dropdown-menu').removeClass('leftauto');
+                    }
+                    if ($('.dropdown', $(this)).length > 0) {
+                        var Menu2LevelWidth = $('.dropdown-menu', $(this)).width();
+                        if (width - MenuLeftOffset - Menu1LevelWidth < Menu2LevelWidth) {
+                            $(this).children('.dropdown-menu').addClass('left-side');
+                        } else {
+                            $(this).children('.dropdown-menu').removeClass('left-side');
+                        }
+                    }
+                });
+            }
+        }
+
+        /* ---------------------------------------------- /*
+         * Navbar hover dropdown on desctop
+         /* ---------------------------------------------- */
+
+        function hoverDropdown(width, mobileTest) {
+            if ((width > 767) && (mobileTest !== true)) {
+                $('.navbar-custom .navbar-nav > li.dropdown, .navbar-custom li.dropdown > ul > li.dropdown').removeClass('open');
+                var delay = 0;
+                var setTimeoutConst;
+                $('.navbar-custom .navbar-nav > li.dropdown, .navbar-custom li.dropdown > ul > li.dropdown').hover(function() {
+                        var $this = $(this);
+                        setTimeoutConst = setTimeout(function() {
+                            $this.addClass('open');
+                            $this.find('.dropdown-toggle').addClass('disabled');
+                        }, delay);
+                    },
+                    function() {
+                        clearTimeout(setTimeoutConst);
+                        $(this).removeClass('open');
+                        $(this).find('.dropdown-toggle').removeClass('disabled');
+                    });
+            } else {
+                $('.navbar-custom .navbar-nav > li.dropdown, .navbar-custom li.dropdown > ul > li.dropdown').unbind('mouseenter mouseleave');
+                $('.navbar-custom [data-toggle=dropdown]').not('.binded').addClass('binded').on('click', function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    $(this).parent().siblings().removeClass('open');
+                    $(this).parent().siblings().find('[data-toggle=dropdown]').parent().removeClass('open');
+                    $(this).parent().toggleClass('open');
+                });
+            }
+        }
+
+        /* ---------------------------------------------- /*
+         * Navbar collapse on click
+         /* ---------------------------------------------- */
+
+        $(document).on('click','.navbar-collapse.in',function(e) {
+            if( $(e.target).is('a') && $(e.target).attr('class') != 'dropdown-toggle' ) {
+                $(this).collapse('hide');
+            }
+        });
+
+
+        /* ---------------------------------------------- /*
+         * Video popup, Gallery
+         /* ---------------------------------------------- */
+
+        $('.video-pop-up').magnificPopup({
+            type: 'iframe'
+        });
+
+        $(".gallery-item").magnificPopup({
+            delegate: 'a',
+            type: 'image',
+            gallery: {
+                enabled: true,
+                navigateByImgClick: true,
+                preload: [0,1]
+            },
+            image: {
+                titleSrc: 'title',
+                tError: 'The image could not be loaded.'
+            }
+        });
+
+
+        /* ---------------------------------------------- /*
+         * Portfolio
+         /* ---------------------------------------------- */
+
+        var worksgrid   = $('#works-grid'),
+            worksgrid_mode;
+
+        if (worksgrid.hasClass('works-grid-masonry')) {
+            worksgrid_mode = 'masonry';
+        } else {
+            worksgrid_mode = 'fitRows';
+        }
+
+        worksgrid.imagesLoaded(function() {
+            worksgrid.isotope({
+                layoutMode: worksgrid_mode,
+                itemSelector: '.work-item'
+            });
+        });
+
+        $('#filters a').click(function() {
+            $('#filters .current').removeClass('current');
+            $(this).addClass('current');
+            var selector = $(this).attr('data-filter');
+
+            worksgrid.isotope({
+                filter: selector,
+                animationOptions: {
+                    duration: 750,
+                    easing: 'linear',
+                    queue: false
+                }
+            });
+
+            return false;
+        });
+
+
+        /* ---------------------------------------------- /*
+         * Testimonials
+         /* ---------------------------------------------- */
+
+        if ($('.testimonials-slider').length > 0 ) {
+            $('.testimonials-slider').flexslider( {
+                animation: "slide",
+                smoothHeight: true
+            });
+        }
+
+
+        /* ---------------------------------------------- /*
+         * Post Slider
+         /* ---------------------------------------------- */
+
+        if ($('.post-images-slider').length > 0 ) {
+            $('.post-images-slider').flexslider( {
+                animation: "slide",
+                smoothHeight: true,
+            });
+        }
+
+
+        /* ---------------------------------------------- /*
+         * Progress bar animations
+         /* ---------------------------------------------- */
+
+        $('.progress-bar').each(function(i) {
+            $(this).appear(function() {
+                var percent = $(this).attr('aria-valuenow');
+                $(this).animate({'width' : percent + '%'});
+                $(this).find('span').animate({'opacity' : 1}, 900);
+                $(this).find('span').countTo({from: 0, to: percent, speed: 900, refreshInterval: 30});
+            });
+        });
+
+
+        /* ---------------------------------------------- /*
+         * Funfact Count-up
+         /* ---------------------------------------------- */
+
+        $('.count-item').each(function(i) {
+            $(this).appear(function() {
+                var number = $(this).find('.count-to').data('countto');
+                $(this).find('.count-to').countTo({from: 0, to: number, speed: 1200, refreshInterval: 30});
+            });
+        });
+
+
+        /* ---------------------------------------------- /*
+         * Youtube video background
+         /* ---------------------------------------------- */
+
+        $(function(){
+            $(".video-player").mb_YTPlayer();
+        });
+
+        $('#video-play').click(function(event) {
+            event.preventDefault();
+            if ($(this).hasClass('fa-play')) {
+                $('.video-player').playYTP();
+            } else {
+                $('.video-player').pauseYTP();
+            }
+            $(this).toggleClass('fa-play fa-pause');
+            return false;
+        });
+
+        $('#video-volume').click(function(event) {
+            event.preventDefault();
+            if ($(this).hasClass('fa-volume-off')) {
+                $('.video-player').YTPUnmute();
+            } else {
+                $('.video-player').YTPMute();
+            }
+            $(this).toggleClass('fa-volume-off fa-volume-up');
+            return false;
+        });
+
+
+        /* ---------------------------------------------- /*
+         * Owl Carousel
+         /* ---------------------------------------------- */
+
+        $('.owl-carousel').each(function(i) {
+
+            // Check items number
+            if ($(this).data('items') > 0) {
+                items = $(this).data('items');
+            } else {
+                items = 4;
+            }
+
+            // Check pagination true/false
+            if (($(this).data('pagination') > 0) && ($(this).data('pagination') === true)) {
+                pagination = true;
+            } else {
+                pagination = false;
+            }
+
+            // Check navigation true/false
+            if (($(this).data('navigation') > 0) && ($(this).data('navigation') === true)) {
+                navigation = true;
+            } else {
+                navigation = false;
+            }
+
+            // Build carousel
+            $(this).owlCarousel( {
+                navText: ['<i class="fa fa-angle-left"></i>', '<i class="fa fa-angle-right"></i>'],
+                nav: navigation,
+                dots: pagination,
+                loop: true,
+                dotsSpeed: 400,
+                items: items,
+                navSpeed: 300,
+                autoplay: 2000
+            });
+
+        });
+
+
+        /* ---------------------------------------------- /*
+         * Blog masonry
+         /* ---------------------------------------------- */
+
+        $('.post-masonry').imagesLoaded(function() {
+            $('.post-masonry').masonry();
+        });
+
+
+        /* ---------------------------------------------- /*
+         * Scroll Animation
+         /* ---------------------------------------------- */
+
+        $('.section-scroll').bind('click', function(e) {
+            var anchor = $(this);
+            $('html, body').stop().animate({
+                scrollTop: $(anchor.attr('href')).offset().top - 50
+            }, 1000);
+            e.preventDefault();
+        });
+
+        /*===============================================================
+         Working Contact Form
+         ================================================================*/
+
+        $("#contactForm").submit(function (e) {
+
+            e.preventDefault();
+            var $ = jQuery;
+
+            var postData = $(this).serializeArray(),
+                formURL = $(this).attr("action"),
+                $cfResponse = $('#contactFormResponse'),
+                $cfsubmit = $("#cfsubmit"),
+                cfsubmitText = $cfsubmit.text();
+
+            $cfsubmit.text("Sending...");
+
+
+            $.ajax(
+                {
+                    url: formURL,
+                    type: "POST",
+                    data: postData,
+                    success: function (data) {
+                        $cfResponse.html(data);
+                        $cfsubmit.text(cfsubmitText);
+                        $('#contactForm input[name=name]').val('');
+                        $('#contactForm input[name=email]').val('');
+                        $('#contactForm textarea[name=message]').val('');
+                    },
+                    error: function (data) {
+                        alert("Error occurd! Please try again");
+                    }
+                });
+
+            return false;
+
+        });
+
+
+        /*===============================================================
+         Working Request A Call Form
+         ================================================================*/
+
+        $("#requestACall").submit(function (e) {
+
+            e.preventDefault();
+            var $ = jQuery;
+
+            var postData = $(this).serializeArray(),
+                formURL = $(this).attr("action"),
+                $cfResponse = $('#requestFormResponse'),
+                $cfsubmit = $("#racSubmit"),
+                cfsubmitText = $cfsubmit.text();
+
+            $cfsubmit.text("Sending...");
+
+
+            $.ajax(
+                {
+                    url: formURL,
+                    type: "POST",
+                    data: postData,
+                    success: function (data) {
+                        $cfResponse.html(data);
+                        $cfsubmit.text(cfsubmitText);
+                        $('#requestACall input[name=name]').val('');
+                        $('#requestACall input[name=subject]').val('');
+                        $('#requestACall textarea[name=phone]').val('');
+                    },
+                    error: function (data) {
+                        alert("Error occurd! Please try again");
+                    }
+                });
+
+            return false;
+
+        });
+
+
+        /*===============================================================
+         Working Reservation Form
+         ================================================================*/
+
+        $("#reservationForm").submit(function (e) {
+
+            e.preventDefault();
+            var $ = jQuery;
+
+            var postData = $(this).serializeArray(),
+                formURL = $(this).attr("action"),
+                $cfResponse = $('#reservationFormResponse'),
+                $cfsubmit = $("#rfsubmit"),
+                cfsubmitText = $cfsubmit.text();
+
+            $cfsubmit.text("Sending...");
+
+
+            $.ajax(
+                {
+                    url: formURL,
+                    type: "POST",
+                    data: postData,
+                    success: function (data) {
+                        $cfResponse.html(data);
+                        $cfsubmit.text(cfsubmitText);
+                        $('#reservationForm input[name=date]').val('');
+                        $('#reservationForm input[name=time]').val('');
+                        $('#reservationForm textarea[name=people]').val('');
+                        $('#reservationForm textarea[name=email]').val('');
+                    },
+                    error: function (data) {
+                        alert("Error occurd! Please try again");
+                    }
+                });
+
+            return false;
+
+        });
+
+
+        /* ---------------------------------------------- /*
+         * Subscribe form ajax
+         /* ---------------------------------------------- */
+
+        $('#subscription-form').submit(function(e) {
+
+            e.preventDefault();
+            var $form           = $('#subscription-form');
+            var submit          = $('#subscription-form-submit');
+            var ajaxResponse    = $('#subscription-response');
+            var email           = $('input#semail').val();
+
+            $.ajax({
+                type: 'POST',
+                url: 'assets/php/subscribe.php',
+                dataType: 'json',
+                data: {
+                    email: email
+                },
+                cache: false,
+                beforeSend: function(result) {
+                    submit.empty();
+                    submit.append('<i class="fa fa-cog fa-spin"></i> Wait...');
+                },
+                success: function(result) {
+                    if(result.sendstatus == 1) {
+                        ajaxResponse.html(result.message);
+                        $form.fadeOut(500);
+                    } else {
+                        ajaxResponse.html(result.message);
+                    }
+                }
+            });
+
+        });
+
+
+        /* ---------------------------------------------- /*
+         * Google Map
+         /* ---------------------------------------------- */
+
+        if($("#map").length == 0 || typeof google == 'undefined') return;
+
+        // When the window has finished loading create our google map below
+        google.maps.event.addDomListener(window, 'load', init);
+
+        var mkr = new google.maps.LatLng(40.6700, -74.2000);
+        var cntr = (mobileTest) ? mkr : new google.maps.LatLng(40.6700, -73.9400);
+
+        function init() {
+            // Basic options for a simple Google Map
+            // For more options see: https://developers.google.com/maps/documentation/javascript/reference#MapOptions
+            var mapOptions = {
+                // How zoomed in you want the map to start at (always required)
+                zoom: 11,
+                scrollwheel: false,
+                // The latitude and longitude to center the map (always required)
+                center: cntr, // New York
+
+                // How you would like to style the map.
+                // This is where you would paste any style found on Snazzy Maps.
+                styles: [
+                    {
+                        "featureType": "all",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "visibility": "on"
+                            },
+                            {
+                                "saturation": "-11"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "administrative",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "saturation": "22"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "administrative",
+                        "elementType": "geometry.stroke",
+                        "stylers": [
+                            {
+                                "saturation": "-58"
+                            },
+                            {
+                                "color": "#cfcece"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "administrative",
+                        "elementType": "labels.text",
+                        "stylers": [
+                            {
+                                "color": "#f8f8f8"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "administrative",
+                        "elementType": "labels.text.fill",
+                        "stylers": [
+                            {
+                                "color": "#999999"
+                            },
+                            {
+                                "visibility": "on"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "administrative",
+                        "elementType": "labels.text.stroke",
+                        "stylers": [
+                            {
+                                "visibility": "on"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "administrative.country",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#f9f9f9"
+                            },
+                            {
+                                "visibility": "simplified"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "landscape",
+                        "elementType": "all",
+                        "stylers": [
+                            {
+                                "color": "#f2f2f2"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "landscape",
+                        "elementType": "geometry",
+                        "stylers": [
+                            {
+                                "saturation": "-19"
+                            },
+                            {
+                                "lightness": "-2"
+                            },
+                            {
+                                "visibility": "on"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "poi",
+                        "elementType": "all",
+                        "stylers": [
+                            {
+                                "visibility": "off"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road",
+                        "elementType": "all",
+                        "stylers": [
+                            {
+                                "saturation": -100
+                            },
+                            {
+                                "lightness": 45
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road.highway",
+                        "elementType": "all",
+                        "stylers": [
+                            {
+                                "visibility": "simplified"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "road.arterial",
+                        "elementType": "labels.icon",
+                        "stylers": [
+                            {
+                                "visibility": "off"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "transit",
+                        "elementType": "all",
+                        "stylers": [
+                            {
+                                "visibility": "off"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "water",
+                        "elementType": "all",
+                        "stylers": [
+                            {
+                                "color": "#d8e1e5"
+                            },
+                            {
+                                "visibility": "on"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "water",
+                        "elementType": "geometry.fill",
+                        "stylers": [
+                            {
+                                "color": "#dedede"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "water",
+                        "elementType": "labels.text",
+                        "stylers": [
+                            {
+                                "color": "#cbcbcb"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "water",
+                        "elementType": "labels.text.fill",
+                        "stylers": [
+                            {
+                                "color": "#9c9c9c"
+                            }
+                        ]
+                    },
+                    {
+                        "featureType": "water",
+                        "elementType": "labels.text.stroke",
+                        "stylers": [
+                            {
+                                "visibility": "off"
+                            }
+                        ]
+                    }
+                ]
+            };
+
+            // Get the HTML DOM element that will contain your map
+            // We are using a div with id="map" seen below in the <body>
+            var mapElement = document.getElementById('map');
+
+            // Create the Google Map using our element and options defined above
+            var map = new google.maps.Map(mapElement, mapOptions);
+
+            // Let's also add a marker while we're at it
+            var image = new google.maps.MarkerImage('assets/images/map-icon.png',
+                new google.maps.Size(59, 65),
+                new google.maps.Point(0, 0),
+                new google.maps.Point(24, 42)
+            );
+
+            var marker = new google.maps.Marker({
+                position: mkr,
+                icon: image,
+                title: 'Titan',
+                infoWindow: {
+                    content: '<p><strong>Rival</strong><br/>121 Somewhere Ave, Suite 123<br/>P: (123) 456-7890<br/>Australia</p>'
+                },
+                map: map,
+            });
+        }
+
+    });
+})(jQuery);
+
+
