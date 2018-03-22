@@ -1,0 +1,583 @@
+(function() {
+	$(window).on('load', function() {
+
+		$('.loader').fadeOut();
+		$('.page-loader').delay(350).fadeOut('slow');
+		$('#timeSheetForm').parsley();
+		$("#searchresult").hide();
+		$("#timesheetenrty").hide();
+		$("#tsSummary").hide();
+		$("#timeperiod").trigger("change");
+	});
+	
+	var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	var weeklyTotal = 0;
+
+	$(document).ready(function(){
+		
+		//$("#timeSheetForm").initValidation();
+		
+		/*$("#system").change(function() {
+			
+			var systemId = $('#system').val();
+			if(systemId){
+				$("#subSystem").empty();
+				var defaultOption = "<option value=\"\"> -select- </option>";
+				$("#subSystem").append(defaultOption);
+				$.get("/Eztrac/getSubsystems/"+systemId,function(data) {
+					data.forEach(function(item, i){
+						var option = "<option value = "+ item.subSystemID+ ">" + item.subSystemName + "</option>";
+						$("#subSystem").append(option);
+					});
+				});
+			}
+		});*/
+		
+		//Ajaxcall to populate the subsystem details based on the selected system 
+		$("#system").change(function() {
+			$("#subSystem").empty();
+			var defaultOption = "<option value=\"\"> -select- </option>";
+			$("#subSystem").append(defaultOption);
+			var systemId = $('#system').val();
+			$.ajax({
+			      type: "POST",
+			      url: "/Eztrac/ajax/timeSheetGetSubsystemList",
+			      data: JSON.stringify(systemId), 
+			      dataType: "json", 
+			      contentType: "application/json; charset=utf-8",
+			      success :
+			      function(response) {
+			    	  console.log(response);
+			    	  response.forEach(function(item, i){
+						var option = "<option value = "+ item.subSystemID+ ">" + item.subSystemName + "</option>";
+						$("#subSystem").append(option);
+					});
+			      }
+			});
+		});
+
+		//Commented By Yamuna - System and subSystem is not mandatory 
+		/*$("#perNumber").focus(function() {
+			if($('#system').val() ==''){
+				$("#system").trigger("change");
+			}
+			if($("#subSystem").val() ==''){
+				$("#subSystem").trigger("change");
+			}
+		});*/
+		
+		//Autocompletion code of PerNumber
+		$("#perNumber").keypress(function() {
+			var period = $('#timeperiod').val();
+			var systemId = $('#system').val();
+			var subSystemId = $("#subSystem").val();
+			
+			var autoCompleteFlagValue = $('#autoCompleteFlag').val();
+			var autoCompleteLengthValue = $('#autoCompleteLength').val();
+			if(autoCompleteFlagValue === 'Y'){
+				var perNumber=$("#perNumber").val();
+				console.log("Pernumber in autocompleteion field is : "+perNumber);
+				//if(parseInt(perNumber.length) >= autoCompleteLengthValue){
+					var perListForSelection = getPerList(systemId, subSystemId, perNumber);
+					setTimeout(function(){ 
+						$("#perNumber").autocomplete(perListForSelection); 
+					}, 300);
+				//}
+			}
+		});
+		
+		//To find currently selected task
+		var lastSel = "";
+		$('#table2 tbody').on('click', '.taskSelectBoxVisible', function() {
+			lastSel = $(this).find('option:selected');
+		});
+		
+		//To check if the user is selecting the task for which already timesheet entry is already available
+		$('#table2 tbody').on('change', '.taskSelectBoxVisible', function() {
+			var this$ = $(this);
+			var currentTaskId=this$.val();
+			var currentBuildId=this$.attr('buildId');
+			var restrictChange = "N";
+			
+			//iterate each tasks - to figure out if there is any dulicate entry (i.e., buildId + TaskId combination )
+			$(".taskSelectBoxVisible").each(function() {
+				var $this = $(this);
+				if(this$.is($this)){
+					 return true;
+				}
+				var tempBuildId = $this.attr('buildId');
+				var tempTaskId = $this.val();
+				if(tempBuildId == currentBuildId && tempTaskId == currentTaskId){
+					alert("Please select a different task");
+					lastSel.prop("selected", true);
+					restrictChange = "Y";
+				}
+			});
+			
+			//when a valid task is selected
+			if(restrictChange =='N'){
+				var selectedRow = this$.closest('tr');
+				
+				//To rename the "name" attribute with the newly selected task
+				selectedRow.find('.renameOnChange').each(function() {
+					var name = $(this).attr('name');
+					$(this).attr('name',renameField(name, /\[(.*?)\]/g, '['+currentTaskId+']', 2));							
+				});
+				
+				//To clear the hours worked
+				selectedRow.find("input[name$=hoursWorked]").each(function() {
+					$(this).val('0');
+					$(this).trigger("change");
+				});
+			}
+			
+		});
+		
+		/* START - Building Timesheet Data when the criterias are changed */
+		$("#timeperiod").change(function() {
+			buildTimeSheetData();
+		});
+		$("#system").change(function() {
+			var systemId = $('#system').val();
+			if(systemId){
+				buildTimeSheetData();
+			}
+		});
+		$("#subSystem").change(function() {
+			var systemId = $('#system').val();
+			var subSystemId = $('#subSystem').val();
+			if(systemId && subSystemId){
+				buildTimeSheetData();
+			}
+		});
+		$("#perNumber").change(function() {
+			buildTimeSheetData();
+		});
+		/* END - Building Timesheet Data when the criterias are changed */
+		
+		
+		//function to build the timesheet data
+		var buildTimeSheetData = function(){
+			
+			var systemId = $('#system').val();
+			var subSystemId = $("#subSystem").val();
+			var period = $('#timeperiod').val();
+			var startDate = period.split("-")[0].trim().replace(/\//g, "-");
+			var endDate = period.split("-")[1].trim().replace(/\//g, "-");
+			var formattedStartDate = getDateInyyyyDDmmFormat(startDate);
+			var formattedEndDate = getDateInyyyyDDmmFormat(endDate);
+
+			$('#table2 thead tr').html("");
+			$('#table2 tbody').html("");
+			$('#table2 tfoot tr').html("");
+			$("#tsSummary").hide();
+			$('#noDataError').hide();
+			
+			/*var url = "/Eztrac/getTimeSheetList/"+ formattedStartDate +"/"+ formattedEndDate;
+			if(systemId){
+				url = url +"/"+ systemId;
+			}
+			if(subSystemId){
+				url = url +"/"+ subSystemId;
+			}*/
+			/*$.get(url ,function(data) {
+				if(jQuery.isEmptyObject(data.timeSheetDetailMap)){
+					$('#noDataError').show();
+				}else{
+					populateTimeSheetTable(startDate, endDate, data);
+				}
+			});*/
+			
+			if(""==systemId){
+				systemId=null;
+			}
+			if(""==subSystemId){
+				subSystemId=null;
+			}
+			var perNumber = $('#perNumber').val();
+			
+			var	timesheetVOAjax = {
+					"startDate":formattedStartDate,
+					"endDate":formattedEndDate,
+					"systemId" : systemId,
+					"subSystemId" : subSystemId,
+					"perNumber" : perNumber
+			}
+			
+			//Ajax call to fetch the timesheet details based on criteria
+			$.ajax({
+			      type: "POST",
+			      url: "/Eztrac/ajax/getTimeSheetList",
+			      data: JSON.stringify(timesheetVOAjax), 
+			      dataType: "json", 
+			      contentType: "application/json; charset=utf-8",
+			      success :
+			      function(response) {
+			    	  console.log(response);
+			    	  
+			    	  //If der is no data available for the given criteria - display the service response description to user
+			    	  if(jQuery.isEmptyObject(response.timeSheetDetailMap)){
+							var resMap= response.responseMap;
+							console.log(resMap)
+					    	 for (var i in resMap){
+					    		 $('#noDataError').show().text(resMap[i]);
+					    	 }
+						}else{
+							populateTimeSheetTable(startDate, endDate, response);
+						}
+			      }
+			});
+		};
+
+		//Function to populate the timesheet table with the retrieved service response
+		var populateTimeSheetTable = function(startDate, endDate, data){
+
+			var inputMap = [];
+			//Fetching dates b/t start n end dates
+			var dates = getDates(new Date(startDate), new Date(endDate));                                                                                                           
+			
+			//Populating the header and footer fields of the Timesheet table
+			$('#table2 thead tr').html("");
+			$('#table2 thead tr').append("<td hidden=\"hidden\" style=\"width:10px;\"><input type=\"checkbox\" class=\"selectall1\" value=\"\"></td><th style=\"width: 80px;\">Project</th><th style=\"width: 240px;\">Project Description</th><td style=\"width: 170px; vertical-align: bottom; text-align: left; font-weight: bold;\">Tasks</td>");
+			$('#table2 tbody').html("");
+			$('#table2 tfoot tr').html("");
+			$('#table2 tfoot tr').append("<th colspan=\"3\" style=\"text-align: center;\">Total</th>");
+			
+			//Populating the dates in Timesheet table based on the timeperiod selected
+			var daysCount = 0;
+			dates.forEach(function(date) {
+				daysCount++;
+				var d = new Date(date);
+				var dayName = days[d.getDay()];
+				var monthNumber = d.getMonth() + +1;
+				
+				$('#table2 thead tr').append("<th style=\"text-align: center;\" id="+dayName+">"+dayName+"("+monthNumber+"/"+d.getDate()+")</th>"); //E.g. id=mon, value=mon(3/22)
+				$('#table2 tfoot tr').append("<td style=\"text-align: center;\" class=\"totalCell\" id=\""+dayName+"-Total\">0</td>"); //E.g. id=mon-Total
+				
+			});
+			
+			$('#table2 tfoot tr').append("<td style=\"text-align: center;\" id=\"weeklyTotal\">0</td>");
+			
+			/************************
+			  inputMap = Map<Integer,Map<integer,List<TimesheetDetails>>>
+			  eg : 
+			  inputMap = 
+			  0 : 9610_201416_232_224 : {224 : { 0:{attributes:values} , 1:{attributes:values} ............}},
+			  1 : 9610_201416_232_225 : {225 : { 0:{attributes:values} , 1:{attributes:values} ............}}, ...................................
+			 
+			 where key of inputMap = perid + buildId + subSystemId + taskId
+			 
+			 *******************************/
+			inputMap = data.timeSheetDetailMap;
+			
+			var counter = 0;
+			var timeSheetObject;
+			for (var i in inputMap){
+				createRow(i, counter, dates);
+			        for (var j in inputMap[i]){
+			        	for(var k=0; k < inputMap[i][j].length; k++) {
+			        		 timeSheetObject = inputMap[i][j][k];
+			        		 console.log(timeSheetObject);
+			        		 var workDate = timeSheetObject.workDate;
+			        		 workDate = new Date(workDate);
+			        		 if(k == 0){
+				        		 $('#DESC-'+i+'').text(timeSheetObject.perDesc);
+				        		 $('#TASK-'+i+' option[value='+timeSheetObject.taskId+']').attr('selected','selected');
+				        		 $('#TASK-'+i+'').attr('name','timeSheetInsertionMap[\''+timeSheetObject.buildId+'\'][\''+timeSheetObject.taskId+'\']');
+				        		 $('#TASK-'+i+'').attr('buildId',timeSheetObject.buildId);
+				        		 $('#CHECKBOX-'+i+'').val(timeSheetObject.buildId);
+				        		 $('#CHECKBOX-'+i+'').attr('name', 'timeSheetInsertionMap[\''+timeSheetObject.buildId+'\']');
+			        		 }
+			        		 if(timeSheetObject.subSystemName){
+			        			 $('#PER-'+i+'').text(timeSheetObject.perNumber +" - "+ timeSheetObject.subSystemName);
+			        		 }
+			        		 if(timeSheetObject.readOnlyFlag === 'Y'){
+			        			 $('#ROW-'+i+'HOURS-'+days[workDate.getDay()]+'').prop('readonly', true);
+			        		 }
+			        		 
+			        		 $('#TSID-'+i+'COL-'+days[workDate.getDay()]+'').val(timeSheetObject.timeSheetId);
+			        		 $('#ROW-'+i+'HOURS-'+days[workDate.getDay()]+'').val(timeSheetObject.hoursWorked);
+			        		 $('#READONLYFLAG-'+i+'COL-'+days[workDate.getDay()]+'').val(timeSheetObject.readOnlyFlag);
+			        	}
+			        	$("input[id^=ROW-"+i+"HOURS-]").each(function(){
+					    	var cell = $(this);
+					    	cell.attr('name','timeSheetInsertionMap[\''+timeSheetObject.buildId+'\'][\''+timeSheetObject.taskId+'\']' + cell.attr('name'));
+						});
+			        	$("input[id^=TSID-"+i+"COL-]").each(function(){
+					    	var cell = $(this);
+					    	cell.attr('name','timeSheetInsertionMap[\''+timeSheetObject.buildId+'\'][\''+timeSheetObject.taskId+'\']' + cell.attr('name'));
+						});
+			        	$("input[id^=DATE-"+i+"COL-]").each(function(){
+					    	var cell = $(this);
+					    	cell.attr('name','timeSheetInsertionMap[\''+timeSheetObject.buildId+'\'][\''+timeSheetObject.taskId+'\']' + cell.attr('name'));
+						});
+			        	$("input[id^=UpdateFlag-"+i+"COL-]").each(function(){
+					    	var cell = $(this);
+					    	cell.attr('name','timeSheetInsertionMap[\''+timeSheetObject.buildId+'\'][\''+timeSheetObject.taskId+'\']' + cell.attr('name'));
+						});
+			        	$("input[id^=READONLYFLAG-"+i+"COL-]").each(function(){
+					    	var cell = $(this);
+					    	cell.attr('name','timeSheetInsertionMap[\''+timeSheetObject.buildId+'\'][\''+timeSheetObject.taskId+'\']' + cell.attr('name'));
+						});
+					}
+				counter++;
+			}
+			populateTotalValues();
+			$('#perNumber').val("");
+			$("#tsSummary").show();
+		};
+		
+		//Function to create a row for the entered timesheet
+		var createRow = function(rowIdentifier, counter, datesList) { //rowIdentifier = InputMap's key
+			
+			$('#table2 tbody').append("<tr id=\"ROW"+rowIdentifier+"\">" +
+					"<td hidden=\"hidden\" style=\"width: 10px;\"><input id=\"CHECKBOX-"+rowIdentifier+"\" type=\"checkbox\" class=\"select\"></td>" +
+					"<td id=\"PER-"+rowIdentifier+"\" style=\"text-align:left;\"></td>" +
+					"<td id=\"DESC-"+rowIdentifier+"\" style=\"text-align:left;\"></td>");
+			
+			var taskListDropDown = $('#taskListDropDown').clone(true);
+			taskListDropDown.attr('id',"TASK-"+rowIdentifier);
+			taskListDropDown.addClass("taskSelectBoxVisible");
+			taskListDropDown.attr("disabled", true);
+			$('#table2 tbody tr:last').append("<td id=\"taskTd\"><span style=\"float:left;\"></span></td>");
+			$('#table2 tbody tr:last').find("td[id='taskTd']").find("span").append(taskListDropDown);
+			$('#table2 tbody tr:last').find("td[id='taskTd']").append("<span style=\"float:right;\"><span class=\"fa-stack fillAll\" style=\"cursor: pointer;\"><span class=\"fa fa-circle-o fa-stack-2x\"></span><strong class=\"fa-stack-1x\">8</strong></span></span>");
+			
+			var dayCounter = 0;
+			var day;
+			var month;
+			var formattedDate;
+			datesList.forEach(function(date) {
+				month = date.getMonth()+1;
+				formattedDate = date.getFullYear()+"-"+month+"-"+date.getDate();
+				day = days[date.getDay()];
+				$('#table2 tbody tr:last').append("<td style=\"text-align: center;\">" +
+						"<input class=\"nullifyOnDuplication renameOnChange\" type=\"hidden\" name=\"["+dayCounter+"].timeSheetId\" id=\"TSID-"+rowIdentifier+"COL-"+day+"\" />" +
+						"<input class=\"nullifyOnDuplication renameOnChange\" type=\"hidden\" name=\"["+dayCounter+"].readOnlyFlag\" id=\"READONLYFLAG-"+rowIdentifier+"COL-"+day+"\" />" +
+						"<input class=\"renameOnChange\" type=\"hidden\" value=\""+formattedDate+"\" name=\"["+dayCounter+"].workDate\" id=\"DATE-"+rowIdentifier+"COL-"+day+"\" />" +
+						"<input class=\"renameOnChange\" type=\"hidden\" value=\"N\" name=\"["+dayCounter+"].updateFlag\" id=\"UpdateFlag-"+rowIdentifier+"COL-"+day+"\" />" +
+						"<input class=\"nullifyOnDuplication renameOnChange updateDaytotal\" name=\"["+dayCounter+"].hoursWorked\" value=\"0\" id=\"ROW-"+rowIdentifier+"HOURS-"+day+"\" style=\"width: 40px;\" " +
+						"type=\"number\" value=\"0\" min=\"0\" max=\"24\" data-parsley-group=\"mandate\" data-parsley-trigger=\"change\"/></td>");
+				dayCounter++;
+			});
+			$('#table2 tbody tr:last').append("<td><a href=\"#\"><i style=\"color: #D3D3D3;\" class=\"glyphicon glyphicon-plus-sign copyTask\"></i></a></td><td><a href=\"#\"><i style=\"color: #D3D3D3;\" class=\"glyphicon glyphicon-minus-sign deleteTask\"></i></a></button></td></tr>");
+		};
+					
+		var populateTotalValues = function() {
+			weeklyTotal = 0;
+			$("tfoot tr .totalCell").each(function() {
+			    var id = $(this).attr("id");
+			    var totalDayName = id.split("-Total", 1);
+			    var totalDayValue = 0;
+			    $("input[id$=HOURS-"+totalDayName+"]").each(function(){
+			    	var colValue = $(this).val();
+				    totalDayValue = +totalDayValue + +colValue;
+				});
+			    $('#'+id+'').text(totalDayValue);
+			    weeklyTotal = weeklyTotal + +totalDayValue;
+			});
+			$("#weeklyTotal").text(weeklyTotal);
+		};
+        
+		$('#timeSheetForm').on('click', '.fillAll', function() {
+			var selectedRow = $(this).closest('tr');
+			selectedRow.find("input[name$=hoursWorked]").each(function() {
+				var readOnlyFlag = $(this).closest('td').find("[id^=READONLYFLAG-]").val();
+				if(readOnlyFlag== 'Y'){
+					$(this).val('8');			    
+					$(this).trigger("change");
+				}
+			});
+		});
+		
+		$('#timeSheetForm').on('change', '.updateDaytotal', function() {
+			var form = $('#timeSheetForm');
+			if (form.parsley().validate({group: 'mandate'})) {
+				var updatedDayName = this.id.split("HOURS-")[1];
+				var updateFlagVariableName = this.name.split(".hoursWorked")[0]+".updateFlag";
+				var totalCellId = updatedDayName+"-Total";
+				var updatedTotalDayValue = 0;
+				var dayTotalGreaterThan24 = 'N';
+				if($(this).val() > 0){
+					$(this).prev("[id^=UpdateFlag-]").val('Y');
+				}else{
+					$(this).prev("[id^=UpdateFlag-]").val('N');
+				}
+				$("input[id$=HOURS-"+updatedDayName+"]").each(function(){
+			    	var colValue = $(this).val();
+			    	updatedTotalDayValue = +updatedTotalDayValue + +colValue;
+				});
+				$('#'+totalCellId+'').text(updatedTotalDayValue);
+				
+				weeklyTotal = 0;
+				$("tfoot tr .totalCell").each(function() {
+				    var totalValue = this.textContent;
+				    weeklyTotal = weeklyTotal + +totalValue;
+				    if(totalValue > 24){
+			    		dayTotalGreaterThan24 = 'Y';
+			    	}
+				});
+				
+				if(dayTotalGreaterThan24 == 'Y'){
+					$('#perDayTotalHoursError').show();
+					$('#saveButton').addClass("disableButton");
+					$('#submitButton').addClass("disableButton");
+				}else{
+					$('#perDayTotalHoursError').hide();
+					$('#saveButton').removeClass("disableButton");
+					$('#submitButton').removeClass("disableButton");
+				}
+				
+				$("#weeklyTotal").text(weeklyTotal);
+			}
+		});
+		
+		$("#deleteButton").click(function() {
+			
+			var timesheetIds = [];
+			$("input[id^=CHECKBOX-]").each(function(){
+				var currentRow = $(this).parent().parent();
+//				if($(this).prop("checked") == true){
+					var timeSheetId; 
+					currentRow.find("input[name$=timeSheetId]").each(function() {
+						timeSheetId = $(this).val();
+					    if(timeSheetId){  
+					    	timesheetIds.push(parseInt(timeSheetId));
+					    }
+					});
+					currentRow.remove();
+//	            }
+				
+			});
+			
+			$.ajax({
+			   type: "POST",
+			   data: {timeSheetIdList:timesheetIds},
+			   url: "/Eztrac/deleteTimeSheet/"+timesheetIds+"/",
+			   success: function(msg){
+			     alert("Success");
+			   }
+			});
+			populateTotalValues();
+		});
+
+		//Function to return all dates between the provided arguments(i.e., startDate and endDate)
+		var getDates = function(startDate, endDate) {
+			
+			  var dates = [],
+			      currentDate = startDate,
+			      addDays = function(days) {
+			        var date = new Date(this.valueOf());
+			        date.setDate(date.getDate() + days);
+			        return date;
+			      };
+			  while (currentDate <= endDate) {
+			    dates.push(currentDate);
+			    currentDate = addDays.call(currentDate, 1);
+			  }
+			  return dates;
+		};
+			
+		var getDateInyyyyDDmmFormat = function(inputDate) {
+			
+			var convertedDate = new Date(inputDate);
+			var month = convertedDate.getMonth()+1;
+			var formattedDate = convertedDate.getFullYear()+"-"+month+"-"+convertedDate.getDate();
+			return formattedDate;
+		};
+		
+		/*var getPerList = function(systemId, subSystemId, perNumber) {
+			var perList = [];
+			$.get("/Eztrac/getPerListForAutoComplete/"+systemId+"/"+subSystemId+"/"+perNumber, function(data) { 
+				data.forEach(function(item, i){
+					perList.push(item);
+				});
+			});
+			return perList;
+		};*/
+		
+		var getPerList = function(systemId, subSystemId, perNumber) {
+			var perList = [];
+			var systemId;
+			var subSystemId;
+			if(""==systemId){
+				systemId=null;
+			}
+			if(""==subSystemId){
+				subSystemId=null;
+			}
+			if(""==perNumber){
+				perNumber=null;
+			}
+			var	timesheetVOAjax = {
+					"systemId" : systemId,
+					"subSystemId" : subSystemId,
+					"perNumber" : perNumber
+			}
+			$.ajax({
+			      type: "POST",
+			      url: "/Eztrac/ajax/getPerListForAutoComplete",
+			      data: JSON.stringify(timesheetVOAjax), 
+			      dataType: "json", 
+			      contentType: "application/json; charset=utf-8",
+			      success :
+			      function(response) {
+			    	  console.log(response);
+			    	  response.forEach(function(item, i){
+			    		  perList.push(item);
+			    	  });
+			      }
+			});
+			return perList;
+		}
+			
+		$('#table2 tbody').on('click', '.copyTask', function() {
+			
+			var rowToCopy = $(this).closest('tr').clone(true);
+			rowToCopy.find("input.nullifyOnDuplication").val('');
+			rowToCopy.find('select').find('option:selected').removeAttr('selected');
+			rowToCopy.find('select').val('');
+			rowToCopy.find('select').attr("disabled", false);
+			
+			rowToCopy.find('.renameOnChange').each(function() {
+				var name = $(this).attr('name');
+				$(this).attr('name',renameField(name, /\[(.*?)\]/g, '[]', 2));
+			});
+
+			$('#table2 tbody').append(rowToCopy);
+		});
+		
+		
+		$('#table2 tbody').on('click', '.deleteTask', function() {
+			alert("click");
+			var timesheetIds = [];
+//			$("input[id^=CHECKBOX-]").each(function(){
+				var currentRow = $(this).closest('tr').clone(true);
+//				if($(this).prop("checked") == true){
+					var timeSheetId; 
+					currentRow.find("input[name$=timeSheetId]").each(function() {
+						timeSheetId = $(this).val();
+					    if(timeSheetId){  
+					    	timesheetIds.push(parseInt(timeSheetId));
+					    }
+					});
+					currentRow.remove();
+//	           }
+//			});
+				
+		});
+		/*renameField(name, /\[(.*?)\]/g, '['+currentTaskId+']', 2)
+		name="timeSheetInsertionMap['201416']['225']"*/
+		function renameField(source, pattern, replacement, n) {
+			  var substr = '';
+			  while (substr = pattern.exec(source)) {
+			    if (--n === 0) {
+			      source = source.slice(0, substr.index) + replacement + source.slice(pattern.lastIndex);
+			      break;
+			    }
+			  }
+			  return source;
+		}			
+	});
+	
+})(jQuery);
